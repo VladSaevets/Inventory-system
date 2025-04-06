@@ -14,5 +14,10 @@ class CustomUser(AbstractUser):
         default=Role.DEPARTMENT_HEAD,
         verbose_name='Роль'
     )
+
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
+
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
