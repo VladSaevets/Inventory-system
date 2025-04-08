@@ -1,0 +1,9 @@
+from django.urls import path
+from .views import AssetDetailView, AssetListView
+
+app_name = 'assets'
+
+urlpatterns = [
+    path('', AssetListView.as_view(), name='asset_list'),
+    path('asset/<int:pk>/', AssetDetailView.as_view(), name='asset_detail'),
+]

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Детали МЦ{% endblock %}
+
+{% block content %}
+<h2>Детали материальной ценности</h2>
+<ul class="list-group">
+    <li class="list-group-item"><strong>Наименование:</strong> {{ asset.name }}</li>
+    <li class="list-group-item"><strong>Инвентарный номер:</strong> {{ asset.inventory_number }}</li>
+    <li class="list-group-item"><strong>Заводской номер:</strong> {{ asset.serial_number }}</li>
+    <li class="list-group-item"><strong>Ответственный:</strong> {{ asset.responsible }}</li>
+    <li class="list-group-item"><strong>Подразделение:</strong> {{ asset.department }}</li>
+    <li class="list-group-item"><strong>Гарантия до:</strong> {{ asset.warranty_until|date:"d.m.Y" }}</li>
+</ul>
+<a href="{% url 'asset_list' %}" class="btn btn-secondary mt-3">Назад</a>
+{% endblock %}
