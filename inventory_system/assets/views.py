@@ -23,5 +23,5 @@ class AssetListView(ListView):
                 Q(responsible_user__first_name__icontains=query) |
                 Q(responsible_user__last_name__icontains=query) |
                 Q(department__name__icontains=query)
-            ).distinct()
+            )
         return Asset.objects.all()
