@@ -11,5 +11,5 @@
     <li class="list-group-item"><strong>Подразделение:</strong> {{ asset.department }}</li>
     <li class="list-group-item"><strong>Гарантия до:</strong> {{ asset.warranty_until|date:"d.m.Y" }}</li>
 </ul>
-<a href="{% url 'asset_list' %}" class="btn btn-secondary mt-3">Назад</a>
+<a href="{% url 'assets:asset_list' %}" class="btn btn-secondary mt-3">Назад</a>
 {% endblock %}
