@@ -19,10 +19,28 @@
             <tr>
                 <td><a href="{% url 'assets:asset_detail' pk=asset.pk %}">{{ asset.name }}</a></td>
                 <td>{{ asset.inventory_number }}</td>
-                <td>{{ asset.serial_number }}</td>
-                <td>{{ asset.responsible }}</td>
+                <td>
+                    {% if asset.serial_number %}
+                        {{ asset.serial_number }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if asset.responsible_user %}
+                        {{ asset.responsible_user.get_full_name|default:asset.responsible_user.username }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
                 <td>{{ asset.department }}</td>
-                <td>{{ asset.warranty_until|date:"d.m.Y" }}</td>
+                <td>
+                    {% if asset.warranty_expiration %}
+                        {{ asset.warranty_expiration|date:"d.m.Y" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
             </tr>
         {% empty %}
             <tr><td colspan="6">Нет доступных записей</td></tr>
