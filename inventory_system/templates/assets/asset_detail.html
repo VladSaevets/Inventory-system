@@ -35,7 +35,31 @@
             {% endif %}
         </li>
     </ul>
+
     <a href="{% url 'assets:asset_edit' asset.pk %}" class="btn btn-warning mt-3">Редактировать</a>
-    <a href="{% url 'assets:asset_delete' asset.pk %}" class="btn btn-danger mt-3">Удалить</a>
+    <button type="button" class="btn btn-danger mt-3" data-bs-toggle="modal" data-bs-target="#deleteModal{{ asset.pk }}">
+        Удалить
+    </button>
     <a href="{% url 'assets:asset_list' %}" class="btn btn-secondary mt-3">Назад</a>
+
+    <div class="modal fade" id="deleteModal{{ asset.pk }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ asset.pk }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel{{ asset.pk }}">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    Вы уверены, что хотите удалить <strong>{{ asset.name }}</strong>?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <form method="post" action="{% url 'assets:asset_delete' asset.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Удалить</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
