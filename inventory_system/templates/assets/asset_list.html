@@ -4,9 +4,56 @@
 {% block content %}
     <h2>Список материальных ценностей</h2>
     <form method="get" class="mb-3">
+        <!-- Поиск -->
         <div class="input-group">
-            <input type="text" name="q" class="form-control" placeholder="Поиск..." value="{{ request.GET.q }}">
-            <button class="btn btn-primary" type="submit">Искать</button>
+            <input type="text" name="q" class="form-control mb-3" placeholder="Поиск..." value="{{ request.GET.q }}">
+        </div>
+
+        <!-- Фильтр по подразделению -->
+        <div class="col-md-3">
+            <select name="department" class="form-select">
+                <option value="">Все подразделения</option>
+                {% for dept in departments %}
+                    <option value="{{ dept.id }}"
+                            {% if request.GET.department == dept.id|stringformat:"s" %}selected{% endif %}>
+                        {{ dept.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Фильтр по ответственному -->
+        <div class="col-md-3">
+            <select name="responsible" class="form-select">
+                <option value="">Все ответственные</option>
+                {% for responsible in responsibles %}
+                    <option value="{{ responsible.id }}"
+                            {% if request.GET.responsible == responsible.id|stringformat:"s" %}selected{% endif %}>
+                        {{ responsible.get_full_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Фильтр по статусу гарантии -->
+        <div class="d-flex align-items-center mb-3">
+            <select name="warranty_status" id="warranty_status" class="form-select w-auto me-2">
+                <option value="">Все</option>
+                <option value="valid" {% if request.GET.warranty_status == "valid" %} selected {% endif %}>Действует
+                </option>
+                <option value="expired" {% if request.GET.warranty_status == "expired" %} selected {% endif %}>
+                    Истекла
+                </option>
+                <option value="expiring_this_month" {% if request.GET.warranty_status == "expiring_this_month" %}
+                        selected {% endif %}>Истекает в этом месяце
+                </option>
+            </select>
+            <label for="warranty_status" class="form-label">Гарантия</label>
+        </div>
+
+        <!-- Кнопка -->
+        <div class="col-md-2 align-self-end">
+            <button type="submit" class="btn btn-primary w-100">Применить</button>
         </div>
     </form>
     <table class="table table-bordered table-hover">
