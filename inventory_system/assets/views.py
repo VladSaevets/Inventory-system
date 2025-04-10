@@ -1,7 +1,27 @@
 from django.shortcuts import render, get_object_or_404
 from django.views.generic import DetailView, ListView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
 from .models import Asset
 from django.db.models import Q
+
+class AssetCreateView(CreateView):
+    model = Asset
+    fields = '__all__'
+    template_name = 'assets/asset_form.html'
+    success_url = reverse_lazy('assets:asset_list')
+
+class AssetUpdateView(UpdateView):
+    model = Asset
+    fields = '__all__'
+    template_name = 'assets/asset_form.html'
+    success_url = reverse_lazy('assets:asset_list')
+
+class AssetDeleteView(DeleteView):
+    model = Asset
+    fields = '__all__'
+    template_name = 'assets/asset_confirm_delete.html'
+    success_url = reverse_lazy('assets:asset_list')
 
 class AssetDetailView(DetailView):
     model = Asset
