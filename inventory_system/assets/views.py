@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404
+from django.utils import timezone
 from django.views.generic import DetailView, ListView
 from .models import Asset, Department
 from django.db.models import Q
@@ -21,11 +22,23 @@ class AssetListView(ListView):
         query = self.request.GET.get('q')
         department_id = self.request.GET.get('department')
         responsible_user_id = self.request.GET.get('responsible')
+        warranty_filter = self.request.GET.get('warranty_status')
 
         if department_id:
             queryset = queryset.filter(department_id=department_id)
         if responsible_user_id:
             queryset = queryset.filter(responsible_user_id=responsible_user_id)
+        if warranty_filter:
+            today = timezone.now().date()
+            if warranty_filter == 'valid':
+                queryset = queryset.filter(warranty_expiration__gte=today)
+            if warranty_filter == 'expired':
+                queryset = queryset.filter(warranty_expiration__lt=today)
+            if warranty_filter == 'expiring_this_month':
+                queryset = queryset.filter(
+                    warranty_expiration__year=today.year,
+                    warranty_expiration__month=today.month
+                )
 
         if query:
             return queryset.filter(
