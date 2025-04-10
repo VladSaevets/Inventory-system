@@ -4,10 +4,39 @@
 {% block content %}
 <h2>Список материальных ценностей</h2>
 <form method="get" class="mb-3">
-    <div class="input-group">
+    <div class="col-md-4">
         <input type="text" name="q" class="form-control" placeholder="Поиск..." value="{{ request.GET.q }}">
-        <button class="btn btn-primary" type="submit">Искать</button>
     </div>
+
+    <!-- Фильтр по подразделению -->
+  <div class="col-md-3">
+    <select name="department" class="form-select">
+      <option value="">Все подразделения</option>
+      {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if request.GET.department == dept.id|stringformat:"s" %}selected{% endif %}>
+          {{ dept.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Фильтр по ответственному -->
+  <div class="col-md-3">
+    <select name="responsible" class="form-select">
+    <option value="">Все ответственные</option>
+        {% for responsible in responsibles %}
+            <option value="{{ responsible.id }}" {% if request.GET.responsible == responsible.id|stringformat:"s" %}selected{% endif %}>
+                {{ responsible.get_full_name }}
+            </option>
+        {% endfor %}
+</select>
+
+  </div>
+
+    <!-- Кнопка -->
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Применить</button>
+      </div>
 </form>
 <table class="table table-bordered table-hover">
     <thead class="table-light">
