@@ -2,38 +2,40 @@
 {% block title %}Детали МЦ{% endblock %}
 
 {% block content %}
-<h2>Детали материальной ценности</h2>
-<ul class="list-group">
-    <li class="list-group-item"><strong>Наименование:</strong> {{ asset.name }}</li>
-    <li class="list-group-item"><strong>Инвентарный номер:</strong>
-        {% if asset.inventory_number %}
-            {{ asset.inventory_number }}
-        {% else %}
-            -
-        {% endif %}
-    </li>
-    <li class="list-group-item"><strong>Заводской номер:</strong>
-        {% if asset.serial_number %}
-            {{ asset.serial_number }}
-        {% else %}
-            -
-        {% endif %}
-    </li>
-    <li class="list-group-item"><strong>Ответственный:</strong>
-        {% if asset.responsible_user %}
-            {{ asset.responsible_user.get_full_name|default:asset.responsible_user.username }}
-        {% else %}
-            -
-        {% endif %}
-    </li>
-    <li class="list-group-item"><strong>Подразделение:</strong> {{ asset.department }}</li>
-    <li class="list-group-item"><strong>Гарантия до:</strong>
-        {% if asset.warranty_expiration %}
-            {{ asset.warranty_expiration|date:"d.m.Y" }}
-        {% else %}
-            -
-        {% endif %}
-    </li>
-</ul>
-<a href="{% url 'assets:asset_list' %}" class="btn btn-secondary mt-3">Назад</a>
+    <h2>Детали материальной ценности</h2>
+    <ul class="list-group">
+        <li class="list-group-item"><strong>Наименование:</strong> {{ asset.name }}</li>
+        <li class="list-group-item"><strong>Инвентарный номер:</strong>
+            {% if asset.inventory_number %}
+                {{ asset.inventory_number }}
+            {% else %}
+                -
+            {% endif %}
+        </li>
+        <li class="list-group-item"><strong>Заводской номер:</strong>
+            {% if asset.serial_number %}
+                {{ asset.serial_number }}
+            {% else %}
+                -
+            {% endif %}
+        </li>
+        <li class="list-group-item"><strong>Ответственный:</strong>
+            {% if asset.responsible_user %}
+                {{ asset.responsible_user.get_full_name|default:asset.responsible_user.username }}
+            {% else %}
+                -
+            {% endif %}
+        </li>
+        <li class="list-group-item"><strong>Подразделение:</strong> {{ asset.department }}</li>
+        <li class="list-group-item"><strong>Гарантия до:</strong>
+            {% if asset.warranty_expiration %}
+                {{ asset.warranty_expiration|date:"d.m.Y" }}
+            {% else %}
+                -
+            {% endif %}
+        </li>
+    </ul>
+    <a href="{% url 'assets:asset_edit' asset.pk %}" class="btn btn-warning mt-3">Редактировать</a>
+    <a href="{% url 'assets:asset_delete' asset.pk %}" class="btn btn-danger mt-3">Удалить</a>
+    <a href="{% url 'assets:asset_list' %}" class="btn btn-secondary mt-3">Назад</a>
 {% endblock %}

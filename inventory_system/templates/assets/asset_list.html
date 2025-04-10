@@ -3,9 +3,10 @@
 
 {% block content %}
     <h2>Список материальных ценностей</h2>
-    <form method="get" class="row g-2 mb-3">
-        <div class="col-md-4">
-            <input type="text" name="q" class="form-control" placeholder="Поиск..." value="{{ request.GET.q }}">
+    <form method="get" class="mb-3">
+        <!-- Поиск -->
+        <div class="input-group">
+            <input type="text" name="q" class="form-control mb-3" placeholder="Поиск..." value="{{ request.GET.q }}">
         </div>
 
         <!-- Фильтр по подразделению -->
@@ -34,14 +35,20 @@
             </select>
         </div>
 
-        <div class="col-md-4">
-            <label for="warranty_status" class="form-label">Гарантия</label>
-            <select name="warranty_status" id="warranty_status" class="form-select">
+        <!-- Фильтр по статусу гарантии -->
+        <div class="d-flex align-items-center mb-3">
+            <select name="warranty_status" id="warranty_status" class="form-select w-auto me-2">
                 <option value="">Все</option>
-                <option value="valid" {% if request.GET.warranty_status == "valid" %} selected {% endif %}>Действует</option>
-                <option value="expired" {% if request.GET.warranty_status == "expired" %} selected {% endif %}>Истекла</option>
-                <option value="expiring_this_month" {% if request.GET.warranty_status == "expiring_this_month" %} selected {% endif %}>Истекает в этом месяце</option>
+                <option value="valid" {% if request.GET.warranty_status == "valid" %} selected {% endif %}>Действует
+                </option>
+                <option value="expired" {% if request.GET.warranty_status == "expired" %} selected {% endif %}>
+                    Истекла
+                </option>
+                <option value="expiring_this_month" {% if request.GET.warranty_status == "expiring_this_month" %}
+                        selected {% endif %}>Истекает в этом месяце
+                </option>
             </select>
+            <label for="warranty_status" class="form-label">Гарантия</label>
         </div>
 
         <!-- Кнопка -->
