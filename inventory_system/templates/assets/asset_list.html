@@ -2,15 +2,55 @@
 {% block title %}Список МЦ{% endblock %}
 
 {% block content %}
-<h2>Список материальных ценностей</h2>
-<form method="get" class="mb-3">
-    <div class="input-group">
-        <input type="text" name="q" class="form-control" placeholder="Поиск..." value="{{ request.GET.q }}">
-        <button class="btn btn-primary" type="submit">Искать</button>
-    </div>
-</form>
-<table class="table table-bordered table-hover">
-    <thead class="table-light">
+    <h2>Список материальных ценностей</h2>
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-4">
+            <input type="text" name="q" class="form-control" placeholder="Поиск..." value="{{ request.GET.q }}">
+        </div>
+
+        <!-- Фильтр по подразделению -->
+        <div class="col-md-3">
+            <select name="department" class="form-select">
+                <option value="">Все подразделения</option>
+                {% for dept in departments %}
+                    <option value="{{ dept.id }}"
+                            {% if request.GET.department == dept.id|stringformat:"s" %}selected{% endif %}>
+                        {{ dept.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Фильтр по ответственному -->
+        <div class="col-md-3">
+            <select name="responsible" class="form-select">
+                <option value="">Все ответственные</option>
+                {% for responsible in responsibles %}
+                    <option value="{{ responsible.id }}"
+                            {% if request.GET.responsible == responsible.id|stringformat:"s" %}selected{% endif %}>
+                        {{ responsible.get_full_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label for="warranty_status" class="form-label">Гарантия</label>
+            <select name="warranty_status" id="warranty_status" class="form-select">
+                <option value="">Все</option>
+                <option value="valid" {% if request.GET.warranty_status == "valid" %} selected {% endif %}>Действует</option>
+                <option value="expired" {% if request.GET.warranty_status == "expired" %} selected {% endif %}>Истекла</option>
+                <option value="expiring_this_month" {% if request.GET.warranty_status == "expiring_this_month" %} selected {% endif %}>Истекает в этом месяце</option>
+            </select>
+        </div>
+
+        <!-- Кнопка -->
+        <div class="col-md-2 align-self-end">
+            <button type="submit" class="btn btn-primary w-100">Применить</button>
+        </div>
+    </form>
+    <table class="table table-bordered table-hover">
+        <thead class="table-light">
         <tr>
             <th>Наименование</th>
             <th>Инвентарный номер</th>
@@ -19,8 +59,8 @@
             <th>Подразделение</th>
             <th>Гарантия до</th>
         </tr>
-    </thead>
-    <tbody>
+        </thead>
+        <tbody>
         {% for asset in assets %}
             <tr>
                 <td><a href="{% url 'assets:asset_detail' pk=asset.pk %}">{{ asset.name }}</a></td>
@@ -49,8 +89,10 @@
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="6">Нет доступных записей</td></tr>
+            <tr>
+                <td colspan="6">Нет доступных записей</td>
+            </tr>
         {% endfor %}
-    </tbody>
-</table>
+        </tbody>
+    </table>
 {% endblock %}
