@@ -19,4 +19,25 @@
             </form>
         </div>
     </div>
+
+    {% if form.errors %}
+    <!-- Toast уведомление об ошибке -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="loginErrorToast" class="toast align-items-center text-bg-danger border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ❌ Неверное имя пользователя или пароль.
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toast = new bootstrap.Toast(document.getElementById('loginErrorToast'), { delay: 7000 });
+            toast.show();
+        });
+    </script>
+    {% endif %}
 {% endblock %}

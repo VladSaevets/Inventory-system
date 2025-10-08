@@ -27,22 +27,39 @@
             {% endif %}
         </li>
         <li class="list-group-item"><strong>Подразделение:</strong> {{ asset.department }}</li>
-        <li class="list-group-item"><strong>Гарантия до:</strong>
+        <li class="list-group-item">
+            <strong>Гарантия до:</strong>
             {% if asset.warranty_expiration %}
                 {{ asset.warranty_expiration|date:"d.m.Y" }}
             {% else %}
                 -
             {% endif %}
         </li>
+        <li class="list-group-item">
+            <strong>Дата поступления:</strong>
+            {% if asset.date_received %}
+                {{ asset.date_received|date:"d.m.Y" }}
+            {% else %}
+                -
+            {% endif %}
+        </li>
+        <li class="list-group-item">
+            <strong>Дата передачи ответственному</strong>
+            {% if asset.date_assigned %}
+                {{ asset.date_assigned|date:"d.m.Y" }}
+            {% else %}
+                -
+            {% endif %}
+        </li>
     </ul>
+    {% if user.is_authenticated %}
+        {% if user.role != "department_head" %}
+            <a href="{% url 'assets:asset_edit' asset.pk %}" class="btn btn-warning mt-3">Редактировать</a>
+            <button type="button" class="btn btn-danger mt-3" data-bs-toggle="modal" data-bs-target="#deleteModal{{ asset.pk }}">
+                Удалить
+            </button>
 
-    <a href="{% url 'assets:asset_edit' asset.pk %}" class="btn btn-warning mt-3">Редактировать</a>
-    <button type="button" class="btn btn-danger mt-3" data-bs-toggle="modal" data-bs-target="#deleteModal{{ asset.pk }}">
-        Удалить
-    </button>
-    <a href="{% url 'assets:asset_list' %}" class="btn btn-secondary mt-3">Назад</a>
-
-    <div class="modal fade" id="deleteModal{{ asset.pk }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ asset.pk }}" aria-hidden="true">
+            <div class="modal fade" id="deleteModal{{ asset.pk }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ asset.pk }}" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -62,4 +79,7 @@
             </div>
         </div>
     </div>
+        {% endif %}
+    {% endif %}
+    <a href="{% url 'assets:asset_list' %}" class="btn btn-secondary mt-3">Назад</a>
 {% endblock %}

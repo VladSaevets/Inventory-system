@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponseForbidden, Http404
 from django.utils import timezone
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
@@ -21,6 +21,11 @@ class AssetCreateView(CreateView):
         messages.success(self.request, "Материальная ценность успешно добавлена.")
         return super().form_valid(form)
 
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role == 'manager':
+            return HttpResponseForbidden("У вас нет прав для добавления материальных ценностей.")
+        return super().dispatch(request, *args, **kwargs)
+
 class AssetUpdateView(UpdateView):
     model = Asset
     fields = '__all__'
@@ -30,6 +35,11 @@ class AssetUpdateView(UpdateView):
     def form_valid(self, form):
         messages.success(self.request, "Изменения успешно сохранены.")
         return super().form_valid(form)
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role == 'manager':
+            return HttpResponseForbidden("У вас нет прав для редактирования материальных ценностей.")
+        return super().dispatch(request, *args, **kwargs)
 
 class AssetDeleteView(DeleteView):
     model = Asset
@@ -41,10 +51,29 @@ class AssetDeleteView(DeleteView):
         messages.success(self.request, "Материальная ценность успешно удалена.")
         return super().form_valid(form)
 
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        user = self.request.user
+
+        # 👨‍💼 Руководитель может смотреть только свои ценности
+        if user.role == 'department_head' and obj.responsible_user != user:
+            raise Http404("У вас нет доступа к этой материальной ценности.")
+        return obj
+
 class AssetDetailView(DetailView):
     model = Asset
     template_name = 'assets/asset_detail.html'
     context_object_name = 'asset'
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        user = self.request.user
+
+        # --- Проверка прав доступа ---
+        if user.is_authenticated:
+            if user.role == "department_head" and obj.responsible_user != user:
+                return HttpResponseForbidden("У вас нет доступа к этой материальной ценности.")
+        return obj
 
 class AssetListView(ListView):
     model = Asset
@@ -52,11 +81,16 @@ class AssetListView(ListView):
     context_object_name = 'assets'
 
     def get_queryset(self):
+        user = self.request.user
+
         queryset = Asset.objects.all()
         query = self.request.GET.get('q')
         department_id = self.request.GET.get('department')
         responsible_user_id = self.request.GET.get('responsible')
         warranty_filter = self.request.GET.get('warranty_status')
+
+        if user.is_authenticated and user.role == "department_head":
+            queryset = queryset.filter(responsible_user = user)
 
         if department_id:
             queryset = queryset.filter(department_id=department_id)
