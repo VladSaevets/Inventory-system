@@ -63,6 +63,13 @@
         </div>
     </form>
     {% if user.is_authenticated %}
+        <div class="mb-3 d-flex justify-content-end">
+            <a href="{% url 'assets:export_assets' %}?{{ request.GET.urlencode }}" class="btn btn-success mb-3">
+                📊 Экспорт в Excel
+            </a>
+        </div>
+
+
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <form method="get" class="d-flex align-items-center">
