@@ -1,5 +1,4 @@
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponseForbidden, Http404
 from django.utils import timezone
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
@@ -10,6 +9,14 @@ from .models import Asset, Department
 from django.db.models import Q
 
 from users.models import CustomUser
+
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from django.http import HttpResponse
+from django.views import View
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+import csv
 
 
 class AssetCreateView(CreateView):
@@ -138,3 +145,153 @@ class AssetListView(ListView):
         context["selected_department"] = self.request.GET.get('department', "")
         context["selected_responsible"] = self.request.GET.get('responsible', "")
         return context
+
+class ExportAssetsToExcelView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        # Получаем данные с учётом фильтров
+        list_view = AssetListView()
+        list_view.request = request
+        queryset = list_view.get_queryset()
+
+        # Создаём Excel-файл
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Материальные ценности"
+
+        # === МЕТАДАННЫЕ ===
+        username = request.user.get_full_name() or request.user.username
+        export_time = timezone.localtime(timezone.now()).strftime("%d.%m.%Y %H:%M:%S")
+
+        ws["A1"] = f"📦 Выгрузка материальных ценностей"
+        ws["A2"] = f"👤 Пользователь: {username}"
+        ws["A3"] = f"📅 Дата выгрузки: {export_time}"
+
+        ws["A1"].font = Font(bold=True, size=14)
+        ws["A2"].font = Font(italic=True, color="555555")
+        ws["A3"].font = Font(italic=True, color="555555")
+
+        ws["A1"].alignment = Alignment(horizontal="left")
+        ws["A2"].alignment = Alignment(horizontal="left")
+        ws["A3"].alignment = Alignment(horizontal="left")
+
+        # === Заголовки таблицы (начинаются с 5-й строки) ===
+        headers = [
+            "Наименование",
+            "Инвентарный номер",
+            "Заводской номер",
+            "Ответственный",
+            "Подразделение",
+            "Гарантия до",
+        ]
+        ws.append([])  # пустая строка между метаданными и таблицей
+        ws.append(headers)
+
+        # Стили заголовков
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+
+        for cell in ws[5]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+
+        # === Данные ===
+        for asset in queryset:
+            ws.append([
+                asset.name,
+                asset.inventory_number,
+                asset.serial_number or "-",
+                asset.responsible_user.get_full_name() if asset.responsible_user else "-",
+                asset.department.name if asset.department else "-",
+                asset.warranty_expiration.strftime("%d.%m.%Y") if asset.warranty_expiration else "-",
+            ])
+
+        # Автоширина колонок
+        for column_cells in ws.columns:
+            length = max(len(str(cell.value)) if cell.value else 0 for cell in column_cells)
+            ws.column_dimensions[column_cells[0].column_letter].width = length + 3
+
+        # Выравнивание данных
+        for row in ws.iter_rows(min_row=6):
+            for cell in row:
+                cell.alignment = Alignment(vertical="center")
+
+        # Добавляем рамку
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin")
+        )
+        for row in ws.iter_rows(min_row=5, max_row=ws.max_row, max_col=ws.max_column):
+            for cell in row:
+                cell.border = thin_border
+
+        # === Ответ пользователю ===
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        filename = f"assets_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        wb.save(response)
+        return response
+
+# Экспорт в CSV
+def export_assets_csv(request):
+    # Получаем те же фильтры, что и в списке
+    query = request.GET.get('q', '')
+    department_id = request.GET.get('department', '')
+    responsible_id = request.GET.get('responsible', '')
+    warranty_status = request.GET.get('warranty_status', '')
+
+    # Базовый queryset
+    assets = Asset.objects.all()
+
+    if query:
+        assets = assets.filter(
+            Q(name__icontains=query) |
+            Q(inventory_number__icontains=query) |
+            Q(serial_number__icontains=query) |
+            Q(responsible_user__first_name__icontains=query) |
+            Q(responsible_user__last_name__icontains=query) |
+            Q(department__name__icontains=query)
+        )
+    if department_id:
+        assets = assets.filter(department_id=department_id)
+    if responsible_id:
+        assets = assets.filter(responsible_user_id=responsible_id)
+
+    # Фильтрация по гарантии
+    today = timezone.now().date()
+    if warranty_status == "valid":
+        assets = assets.filter(warranty_expiration__gte=today)
+    elif warranty_status == "expired":
+        assets = assets.filter(warranty_expiration__lt=today)
+    elif warranty_status == "expiring_this_month":
+        assets = assets.filter(
+            warranty_expiration__year=today.year,
+            warranty_expiration__month=today.month
+        )
+
+    # --- Генерация CSV-файла ---
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="assets.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        "Наименование", "Инвентарный номер", "Серийный номер",
+        "Ответственный", "Подразделение", "Гарантия до"
+    ])
+
+    for asset in assets:
+        writer.writerow([
+            asset.name,
+            asset.inventory_number,
+            asset.serial_number or "-",
+            asset.responsible_user.get_full_name() if asset.responsible_user else "-",
+            asset.department.name if asset.department else "-",
+            asset.warranty_expiration.strftime("%d.%m.%Y") if asset.warranty_expiration else "-"
+        ])
+
+    return response
