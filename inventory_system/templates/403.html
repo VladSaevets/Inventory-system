@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Доступ запрещен{% endblock %}
+
+{% block content %}
+<div class="container mt-5 text-center">
+    <div class="alert alert-danger shadow-sm p-4">
+        <h1 class="display-6 fw-bold mb-3">Ошибка 403 — Доступ запрещён</h1>
+        <p class="fs-5 mb-4">
+            У вас нет прав для просмотра этой материальной ценности
+            или выполнения данного действия.
+        </p>
+        <a href="{% url 'assets:asset_list' %}" class="btn btn-primary btn-lg">
+            ⬅ Вернуться к списку материальных ценностей
+        </a>
+    </div>
+</div>
+{% endblock %}

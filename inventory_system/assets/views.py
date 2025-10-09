@@ -1,3 +1,4 @@
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseForbidden, Http404
 from django.utils import timezone
 from django.views.generic import DetailView, ListView
@@ -22,8 +23,8 @@ class AssetCreateView(CreateView):
         return super().form_valid(form)
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role == 'manager':
-            return HttpResponseForbidden("У вас нет прав для добавления материальных ценностей.")
+        if request.user.role == 'department_head':
+            raise PermissionDenied("У вас нет доступа к добавлению.")
         return super().dispatch(request, *args, **kwargs)
 
 class AssetUpdateView(UpdateView):
@@ -37,8 +38,8 @@ class AssetUpdateView(UpdateView):
         return super().form_valid(form)
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role == 'manager':
-            return HttpResponseForbidden("У вас нет прав для редактирования материальных ценностей.")
+        if request.user.role == 'department_head':
+            raise PermissionDenied("У вас нет доступа к редактированию этой материальной ценности.")
         return super().dispatch(request, *args, **kwargs)
 
 class AssetDeleteView(DeleteView):
@@ -56,8 +57,8 @@ class AssetDeleteView(DeleteView):
         user = self.request.user
 
         # 👨‍💼 Руководитель может смотреть только свои ценности
-        if user.role == 'department_head' and obj.responsible_user != user:
-            raise Http404("У вас нет доступа к этой материальной ценности.")
+        if user.role == 'department_head':
+            raise PermissionDenied("У вас нет доступа к удалению данной материальной ценности.")
         return obj
 
 class AssetDetailView(DetailView):
@@ -72,13 +73,23 @@ class AssetDetailView(DetailView):
         # --- Проверка прав доступа ---
         if user.is_authenticated:
             if user.role == "department_head" and obj.responsible_user != user:
-                return HttpResponseForbidden("У вас нет доступа к этой материальной ценности.")
+                raise PermissionDenied("У вас нет доступа к этой материальной ценности.")
         return obj
 
 class AssetListView(ListView):
     model = Asset
     template_name = 'assets/asset_list.html'
     context_object_name = 'assets'
+    paginate_by = 20
+
+    def get_paginate_by(self, queryset):
+        """Определяет, сколько элементов показывать на странице."""
+        paginate_by = self.request.GET.get('paginate_by', 20)  # значение по умолчанию — 20
+        try:
+            paginate_by = int(paginate_by)
+        except ValueError:
+            paginate_by = 20
+        return paginate_by
 
     def get_queryset(self):
         user = self.request.user
