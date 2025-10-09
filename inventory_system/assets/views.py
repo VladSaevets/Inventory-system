@@ -16,6 +16,8 @@ from django.http import HttpResponse
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 
+import csv
+
 
 class AssetCreateView(CreateView):
     model = Asset
@@ -234,3 +236,62 @@ class ExportAssetsToExcelView(LoginRequiredMixin, View):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         wb.save(response)
         return response
+
+# Экспорт в CSV
+def export_assets_csv(request):
+    # Получаем те же фильтры, что и в списке
+    query = request.GET.get('q', '')
+    department_id = request.GET.get('department', '')
+    responsible_id = request.GET.get('responsible', '')
+    warranty_status = request.GET.get('warranty_status', '')
+
+    # Базовый queryset
+    assets = Asset.objects.all()
+
+    if query:
+        assets = assets.filter(
+            Q(name__icontains=query) |
+            Q(inventory_number__icontains=query) |
+            Q(serial_number__icontains=query) |
+            Q(responsible_user__first_name__icontains=query) |
+            Q(responsible_user__last_name__icontains=query) |
+            Q(department__name__icontains=query)
+        )
+    if department_id:
+        assets = assets.filter(department_id=department_id)
+    if responsible_id:
+        assets = assets.filter(responsible_user_id=responsible_id)
+
+    # Фильтрация по гарантии
+    today = timezone.now().date()
+    if warranty_status == "valid":
+        assets = assets.filter(warranty_expiration__gte=today)
+    elif warranty_status == "expired":
+        assets = assets.filter(warranty_expiration__lt=today)
+    elif warranty_status == "expiring_this_month":
+        assets = assets.filter(
+            warranty_expiration__year=today.year,
+            warranty_expiration__month=today.month
+        )
+
+    # --- Генерация CSV-файла ---
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="assets.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        "Наименование", "Инвентарный номер", "Серийный номер",
+        "Ответственный", "Подразделение", "Гарантия до"
+    ])
+
+    for asset in assets:
+        writer.writerow([
+            asset.name,
+            asset.inventory_number,
+            asset.serial_number or "-",
+            asset.responsible_user.get_full_name() if asset.responsible_user else "-",
+            asset.department.name if asset.department else "-",
+            asset.warranty_expiration.strftime("%d.%m.%Y") if asset.warranty_expiration else "-"
+        ])
+
+    return response
