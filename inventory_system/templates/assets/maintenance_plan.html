@@ -1,52 +1,65 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends "base.html" %}
+{% load month_name %}
+{% block title %}План ТО{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4">План технического обслуживания</h2>
+<h2>План технического обслуживания</h2>
 
-    <form method="get" class="d-flex justify-content-between align-items-center mb-3">
-        <div class="d-flex align-items-center">
-            <label for="period" class="me-2">Период:</label>
-            <select id="period" name="period" class="form-select me-3" style="width: 200px;">
-                {% for num, name in months %}
-                    <option value="{{ num }}" {% if num == selected_month %}selected{% endif %}>{{ name }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit" class="btn btn-primary">Применить</button>
+<form method="get" class="row g-3 align-items-end mb-3">
+    <div class="col-md-3">
+        <label for="year" class="form-label">Год:</label>
+        <input type="number" name="year" id="year" class="form-control" value="{{ year }}">
+    </div>
+
+    <div class="col-md-3">
+        <label for="month" class="form-label">Месяц:</label>
+        <select name="month" id="month" class="form-select">
+            <option value="">Все</option>
+            {% for value, name in months %}
+                <option value="{{ value }}" {% if month == value %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Показать</button>
+    </div>
+
+    <div class="col-md-2">
+        <button type="submit" name="export" value="1" class="btn btn-success w-100">Выгрузить в Excel</button>
+    </div>
+</form>
+
+{% if maintenance_data %}
+<h4 class="mt-4">📅 Календарь ТО на {{ year }} год</h4>
+<div class="row">
+    {% for m, entries in calendar_data.items %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light fw-bold text-center">
+                    {{ months|dictsort:"0"|slice:"12"|default_if_none:"" }}{{ m|month_name }}
+                </div>
+                <div class="card-body p-2">
+                    {% if entries %}
+                        <ul class="list-group list-group-flush">
+                            {% for entry in entries %}
+                                <li class="list-group-item">
+                                    <strong>{{ entry.asset.name }}</strong><br>
+                                    Инв. №: {{ entry.asset.inventory_number }}<br>
+                                    <small>Дата ТО: {{ entry.maintenance_date|date:"d.m.Y" }}</small><br>
+                                    <a href="{% url 'assets:asset_detail' pk=entry.asset.pk %}" class="btn btn-sm btn-outline-primary mt-2">Подробнее</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted text-center">Нет ТО в этом месяце</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-        <a href="{% url 'assets:export_maintenance_plan_excel' %}?month={{ selected_month }}" class="btn btn-success">
-            📅 Скачать в Excel
-        </a>
-    </form>
-
-    {% if maintenance_items %}
-        <table class="table table-striped table-bordered text-center align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Наименование</th>
-                    <th>Инвентарный номер</th>
-                    <th>Подразделение</th>
-                    <th>Ответственный</th>
-                    <th>Дата поступления</th>
-                    <th>Плановая дата ТО</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in maintenance_items %}
-                    <tr>
-                        <td>{{ item.asset.name }}</td>
-                        <td>{{ item.asset.inventory_number }}</td>
-                        <td>{{ item.asset.department.name }}</td>
-                        <td>{{ item.asset.responsible_user.get_full_name }}</td>
-                        <td>{{ item.asset.date_received|date:"d.m.Y" }}</td>
-                        <td><strong>{{ item.maintenance_date|date:"d.m.Y" }}</strong></td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <div class="alert alert-info text-center">На выбранный месяц нет запланированных ТО.</div>
-    {% endif %}
+    {% endfor %}
 </div>
+{% else %}
+<p>Нет данных для выбранного периода.</p>
+{% endif %}
 {% endblock %}
