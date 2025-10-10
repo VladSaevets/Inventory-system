@@ -20,6 +20,8 @@ class Asset(models.Model):
     date_received = models.DateField(verbose_name="Дата поступления в организацию")
     date_assigned = models.DateField(verbose_name="Дата передачи ответственному")
     warranty_expiration = models.DateField(verbose_name="Гарантия до")
+    last_maintenance = models.DateField(blank=True, null=True, verbose_name="Дата последнего ТО")
+
     responsible_user = models.ForeignKey(
         CustomUser,
         on_delete=models.SET_NULL,

@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 from django.views.generic import DetailView, ListView
@@ -17,6 +18,11 @@ from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 import csv
+
+from datetime import date
+from dateutil.relativedelta import relativedelta
+from django.shortcuts import render
+from openpyxl import Workbook
 
 
 class AssetCreateView(CreateView):
@@ -294,4 +300,127 @@ def export_assets_csv(request):
             asset.warranty_expiration.strftime("%d.%m.%Y") if asset.warranty_expiration else "-"
         ])
 
+    return response
+
+@login_required
+def maintenance_plan_view(request):
+    user = request.user
+    month = int(request.GET.get('month', date.today().month))
+    year = date.today().year
+
+    # Фильтрация по ролям
+    if user.role == "department_head":
+        assets = Asset.objects.filter(responsible_user=user)
+    else:
+        assets = Asset.objects.all()
+
+    # Определяем ценности, у которых ТО в выбранном месяце
+    maintenance_items = []
+    for asset in assets:
+        if not asset.date_received:
+            continue
+
+        maintenance_date = asset.date_received
+        while maintenance_date.year <= year:
+            if maintenance_date.year == year and maintenance_date.month == month:
+                maintenance_items.append({
+                    'asset': asset,
+                    'maintenance_date': maintenance_date
+                })
+            maintenance_date += relativedelta(months=6)
+
+    months = [
+        (1, "Январь"), (2, "Февраль"), (3, "Март"), (4, "Апрель"),
+        (5, "Май"), (6, "Июнь"), (7, "Июль"), (8, "Август"),
+        (9, "Сентябрь"), (10, "Октябрь"), (11, "Ноябрь"), (12, "Декабрь")
+    ]
+
+    return render(request, "assets/maintenance_plan.html", {
+        'maintenance_items': maintenance_items,
+        'months': months,
+        'selected_month': month,
+    })
+
+
+@login_required
+def export_maintenance_plan_excel(request):
+    user = request.user
+    month = int(request.GET.get('month', date.today().month))
+    year = date.today().year
+
+    # Фильтрация по ролям
+    if user.role == "department_head":
+        assets = Asset.objects.filter(responsible_user=user)
+    else:
+        assets = Asset.objects.all()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "План ТО"
+
+    # Оформление
+    bold_font = Font(bold=True)
+    center_alignment = Alignment(horizontal="center", vertical="center")
+    header_fill = PatternFill(start_color="D9EAD3", end_color="D9EAD3", fill_type="solid")
+    border = Border(left=Side(style="thin"), right=Side(style="thin"),
+                    top=Side(style="thin"), bottom=Side(style="thin"))
+
+    # Заголовки
+    headers = [
+        "Наименование",
+        "Инвентарный номер",
+        "Ответственный",
+        "Подразделение",
+        "Дата поступления",
+        "Плановая дата ТО"
+    ]
+    ws.append(headers)
+
+    for col in ws.iter_cols(min_row=1, max_row=1, min_col=1, max_col=len(headers)):
+        for cell in col:
+            cell.font = bold_font
+            cell.alignment = center_alignment
+            cell.fill = header_fill
+            cell.border = border
+
+    # Заполнение данных
+    for asset in assets:
+        if not asset.date_received:
+            continue
+
+        maintenance_date = asset.date_received
+        while maintenance_date.year <= year:
+            if maintenance_date.year == year and maintenance_date.month == month:
+                ws.append([
+                    asset.name,
+                    asset.inventory_number,
+                    asset.responsible_user.get_full_name() if asset.responsible_user else "-",
+                    asset.department.name if asset.department else "-",
+                    asset.date_received.strftime("%d.%m.%Y"),
+                    maintenance_date.strftime("%d.%m.%Y"),
+                ])
+            maintenance_date += relativedelta(months=6)
+
+    # Оформление ячеек
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=len(headers)):
+        for cell in row:
+            cell.border = border
+            cell.alignment = Alignment(horizontal="center")
+
+    # Автоширина столбцов
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        ws.column_dimensions[column].width = max_length + 2
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="План_ТО_{month}_{year}.xlsx"'
+    wb.save(response)
     return response
