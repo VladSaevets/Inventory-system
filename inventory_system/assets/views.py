@@ -450,10 +450,8 @@ class MaintenancePlanView(View):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
 
-        filename = f"План_ТО_{year}"
-        if month:
-            filename += f"_{month}"
+        filename = "План ТО"
 
-        response['Content-Disposition'] = f'attachment; filename={smart_str(filename)}.xlsx'
+        response['Content-Disposition'] = f'attachment; filename="plan_TO".xlsx'
         wb.save(response)
         return response

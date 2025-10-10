@@ -23,13 +23,15 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'assets:asset_list' %}">Все ценности</a>
                 </li>
-                <li class="nav-item">
-                  <a class="nav-link" href="{% url 'assets:maintenance_plan' %}">План ТО</a>
-                </li>
-                {% if user.role != "department_head" %}
+                {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'assets:asset_add' %}">Добавить ценность</a>
+                      <a class="nav-link" href="{% url 'assets:maintenance_plan' %}">План ТО</a>
                     </li>
+                    {% if user.role != "department_head" %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'assets:asset_add' %}">Добавить ценность</a>
+                        </li>
+                    {% endif %}
                 {% endif %}
             </ul>
             <ul class="navbar-nav">

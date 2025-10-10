@@ -16,7 +16,7 @@
         <select name="month" id="month" class="form-select">
             <option value="">Все</option>
             {% for value, name in months %}
-                <option value="{{ value }}" {% if month == value %}selected{% endif %}>{{ name }}</option>
+                <option value="{{ value }}" {% if month|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ name }}</option>
             {% endfor %}
         </select>
     </div>
@@ -34,10 +34,12 @@
 <h4 class="mt-4">📅 Календарь ТО на {{ year }} год</h4>
 <div class="row">
     {% for m, entries in calendar_data.items %}
+        {# ⚙️ Показываем только выбранный месяц или все, если не выбран #}
+        {% if not month or month|stringformat:"s" == m|stringformat:"s" %}
         <div class="col-md-4 mb-4">
             <div class="card shadow-sm">
                 <div class="card-header bg-light fw-bold text-center">
-                    {{ months|dictsort:"0"|slice:"12"|default_if_none:"" }}{{ m|month_name }}
+                    {{ m|month_name }}
                 </div>
                 <div class="card-body p-2">
                     {% if entries %}
@@ -47,7 +49,9 @@
                                     <strong>{{ entry.asset.name }}</strong><br>
                                     Инв. №: {{ entry.asset.inventory_number }}<br>
                                     <small>Дата ТО: {{ entry.maintenance_date|date:"d.m.Y" }}</small><br>
-                                    <a href="{% url 'assets:asset_detail' pk=entry.asset.pk %}" class="btn btn-sm btn-outline-primary mt-2">Подробнее</a>
+                                    <a href="{% url 'assets:asset_detail' pk=entry.asset.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+                                        Подробнее
+                                    </a>
                                 </li>
                             {% endfor %}
                         </ul>
@@ -57,6 +61,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     {% endfor %}
 </div>
 {% else %}
