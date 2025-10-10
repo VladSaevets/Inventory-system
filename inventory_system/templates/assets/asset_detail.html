@@ -51,6 +51,14 @@
                 -
             {% endif %}
         </li>
+        <li class="list-group-item">
+            <strong>Дата последнего ТО</strong>
+            {% if asset.last_maintenance %}
+                {{ asset.last_maintenance|date:"d.m.Y" }}
+            {% else %}
+                -
+            {% endif %}
+        </li>
     </ul>
     {% if user.is_authenticated %}
         {% if user.role != "department_head" %}

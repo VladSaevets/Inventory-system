@@ -31,40 +31,75 @@
 </form>
 
 {% if maintenance_data %}
-<h4 class="mt-4">📅 Календарь ТО на {{ year }} год</h4>
-<div class="row">
-    {% for m, entries in calendar_data.items %}
-        {# ⚙️ Показываем только выбранный месяц или все, если не выбран #}
-        {% if not month or month|stringformat:"s" == m|stringformat:"s" %}
-        <div class="col-md-4 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light fw-bold text-center">
-                    {{ m|month_name }}
-                </div>
-                <div class="card-body p-2">
-                    {% if entries %}
-                        <ul class="list-group list-group-flush">
-                            {% for entry in entries %}
-                                <li class="list-group-item">
-                                    <strong>{{ entry.asset.name }}</strong><br>
-                                    Инв. №: {{ entry.asset.inventory_number }}<br>
-                                    <small>Дата ТО: {{ entry.maintenance_date|date:"d.m.Y" }}</small><br>
-                                    <a href="{% url 'assets:asset_detail' pk=entry.asset.pk %}" class="btn btn-sm btn-outline-primary mt-2">
-                                        Подробнее
-                                    </a>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p class="text-muted text-center">Нет ТО в этом месяце</p>
-                    {% endif %}
+    {% if month %}
+        {% with selected_entries=calendar_data %}
+            {% for m, entries in selected_entries.items %}
+                {% if month|stringformat:"s" == m|stringformat:"s" %}
+                    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+                        <div id="toastMessage" class="toast align-items-center text-white {% if entries %}bg-success{% else %}bg-warning text-dark{% endif %} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                            <div class="d-flex">
+                                <div class="toast-body">
+                                    {% if entries %}
+                                        ✅ В месяце <strong>{{ m|month_name }}</strong> запланировано {{ entries|length }} ТО.
+                                    {% else %}
+                                        ⚠ В месяце <strong>{{ m|month_name }}</strong> нет запланированных ТО.
+                                    {% endif %}
+                                </div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Закрыть"></button>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endwith %}
+    {% endif %}
+
+
+    <h4 class="mt-4">📅 Календарь ТО на {{ year }} год</h4>
+    <div class="row">
+        {% for m, entries in calendar_data.items %}
+            {# ⚙️ Показываем только выбранный месяц или все, если не выбран #}
+            {% if not month or month|stringformat:"s" == m|stringformat:"s" %}
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light fw-bold text-center">
+                        {{ m|month_name }}
+                    </div>
+                    <div class="card-body p-2">
+                        {% if entries %}
+                            <ul class="list-group list-group-flush">
+                                {% for entry in entries %}
+                                    <li class="list-group-item">
+                                        <strong>{{ entry.asset.name }}</strong><br>
+                                        Инв. №: {{ entry.asset.inventory_number }}<br>
+                                        <small>Дата ТО: {{ entry.maintenance_date|date:"d.m.Y" }}</small><br>
+                                        <a href="{% url 'assets:asset_detail' pk=entry.asset.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+                                            Подробнее
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted text-center">Нет ТО в этом месяце</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
-        {% endif %}
-    {% endfor %}
-</div>
+            {% endif %}
+        {% endfor %}
+    </div>
 {% else %}
-<p>Нет данных для выбранного периода.</p>
+    <p>Нет данных для выбранного периода.</p>
 {% endif %}
+
+<!-- Инициализация toast -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toastEl = document.getElementById('toastMessage');
+        if (toastEl) {
+            const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+            toast.show();
+        }
+    });
+</script>
 {% endblock %}
