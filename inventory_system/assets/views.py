@@ -5,7 +5,7 @@ from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib import messages
 
-from .models import Asset, Department
+from .models import Asset, Department, MaintenanceRecord
 from django.db.models import Q
 
 from users.models import CustomUser
@@ -22,7 +22,6 @@ from datetime import date
 import datetime
 from dateutil.relativedelta import relativedelta
 from openpyxl import Workbook
-from django.utils.encoding import smart_str
 from django.shortcuts import render
 
 
@@ -455,3 +454,117 @@ class MaintenancePlanView(View):
         response['Content-Disposition'] = f'attachment; filename="plan_TO".xlsx'
         wb.save(response)
         return response
+
+class MaintenanceJournalView(ListView):
+    model = MaintenanceRecord
+    template_name = 'assets/maintenance_journal.html'
+    context_object_name = 'records'
+
+    def get_queryset(self):
+        queryset = MaintenanceRecord.objects.select_related('asset', 'performed_by')
+        year = self.request.GET.get('year')
+        month = self.request.GET.get('month')
+
+        if year:
+            queryset = queryset.filter(date__year=year)
+        if month:
+            queryset = queryset.filter(date__month=month)
+
+        return queryset.order_by('-date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        current_year = date.today().year
+        years = range(current_year - 5, current_year + 1)
+
+        context.update({
+            'years': years,
+            'months': {
+                1: 'Январь', 2: 'Февраль', 3: 'Март', 4: 'Апрель',
+                5: 'Май', 6: 'Июнь', 7: 'Июль', 8: 'Август',
+                9: 'Сентябрь', 10: 'Октябрь', 11: 'Ноябрь', 12: 'Декабрь'
+            },
+            'selected_year': self.request.GET.get('year'),
+            'selected_month': self.request.GET.get('month'),
+        })
+        return context
+
+
+# --- Экспорт в Excel ---
+def export_maintenance_to_excel(request):
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+
+    # Значения по умолчанию
+    if not year or year == 'None':
+        year = datetime.date.today().year
+    else:
+        year = int(year)
+
+    if not month or month == 'None':
+        month = ''
+    else:
+        month = int(month)
+
+    queryset = MaintenanceRecord.objects.select_related('asset', 'performed_by')
+    if year:
+        queryset = queryset.filter(date__year=year)
+    if month:
+        queryset = queryset.filter(date__month=month)
+    queryset = queryset.order_by('date')
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Журнал ТО"
+
+    # Заголовок
+    title = "ЖУРНАЛ ТЕХНИЧЕСКОГО ОБСЛУЖИВАНИЯ"
+    ws.merge_cells('A1:F1')
+    ws['A1'] = title
+    ws['A1'].font = Font(size=14, bold=True)
+    ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[1].height = 25
+
+    # Заголовки таблицы
+    headers = ["№", "Ценность", "Инв. №", "Дата ТО", "Исполнитель", "Описание"]
+    header_fill = PatternFill(start_color="C0C0C0", end_color="C0C0C0", fill_type="solid")
+    border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                    top=Side(style='thin'), bottom=Side(style='thin'))
+
+    ws.append(headers)
+    for cell in ws[2]:
+        cell.font = Font(bold=True)
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = border
+
+    # Заполнение строк
+    for i, record in enumerate(queryset, start=1):
+        ws.append([
+            i,
+            record.asset.name,
+            record.asset.inventory_number if hasattr(record.asset, 'inventory_number') else '',
+            record.date.strftime('%d.%m.%Y'),
+            record.performed_by.get_full_name() if record.performed_by else '',
+            record.description or '',
+        ])
+
+    # Применяем границы и выравнивание
+    for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=1, max_col=6):
+        for cell in row:
+            cell.border = border
+            cell.alignment = Alignment(vertical='top')
+
+    # Автоматическая ширина (пропускаем объединённые ячейки)
+    for col_idx, column_cells in enumerate(ws.columns, 1):
+        max_length = 0
+        column_letter = ws.cell(row=2, column=col_idx).column_letter  # Берём вторую строку (заголовок)
+        for cell in column_cells:
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+        ws.column_dimensions[column_letter].width = max_length + 2
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="Журнал_ТО.xlsx"'
+    wb.save(response)
+    return response

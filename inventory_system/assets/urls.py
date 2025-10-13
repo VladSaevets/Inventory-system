@@ -16,4 +16,5 @@ urlpatterns = [
     path('export/csv/', export_assets_csv, name='export_csv'),
     path('maintenance-plan/', MaintenancePlanView.as_view(), name='maintenance_plan'),
     path('maintenance-plan/export/', MaintenancePlanView.export_to_excel, name='export_maintenance_plan_excel'),
-]
+    path('maintenance-journal/', views.MaintenanceJournalView.as_view(), name='maintenance_journal'),
+    path('maintenance-journal/export/', views.export_maintenance_to_excel, name='export_maintenance_excel'),]

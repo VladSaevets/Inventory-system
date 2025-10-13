@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4 text-center">Журнал технического обслуживания</h2>
+
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-3">
+            <label for="year" class="form-label">Год:</label>
+            <select name="year" id="year" class="form-select">
+                <option value="">Все годы</option>
+                {% for y in years %}
+                    <option value="{{ y }}" {% if selected_year|stringformat:"s" == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label for="month" class="form-label">Месяц:</label>
+            <select name="month" id="month" class="form-select">
+                <option value="">Все месяцы</option>
+                {% for key, val in months.items %}
+                    <option value="{{ key }}" {% if selected_month|stringformat:"s" == key|stringformat:"s" %}selected{% endif %}>{{ val }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-6 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary me-2">Фильтровать</button>
+            <a href="{% url 'assets:export_maintenance_excel' %}?year={{ selected_year }}&month={{ selected_month }}" class="btn btn-success">
+                Скачать Excel
+            </a>
+        </div>
+    </form>
+
+    {% if records %}
+    <table class="table table-bordered table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>№</th>
+                <th>Ценность</th>
+                <th>Инв. №</th>
+                <th>Дата ТО</th>
+                <th>Исполнитель</th>
+                <th>Описание</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><a href="{% url 'assets:asset_detail' record.asset.id %}">{{ record.asset.name }}</a></td>
+                <td>{{ record.asset.inventory_number }}</td>
+                <td>{{ record.date|date:"d.m.Y" }}</td>
+                <td>{{ record.performed_by.get_full_name }}</td>
+                <td>{{ record.description|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <div class="alert alert-info text-center">Записей не найдено.</div>
+    {% endif %}
+</div>
+{% endblock %}
