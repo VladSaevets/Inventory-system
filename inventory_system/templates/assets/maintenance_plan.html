@@ -5,7 +5,7 @@
 {% block content %}
 <h2>План технического обслуживания</h2>
 
-<form method="get" class="row g-3 align-items-end mb-3">
+<form method="get" class="row g-3 align-items-end mb-3" id="filterForm">
     <div class="col-md-3">
         <label for="year" class="form-label">Год:</label>
         <input type="number" name="year" id="year" class="form-control" value="{{ year }}">
@@ -15,29 +15,36 @@
         <label for="month" class="form-label">Месяц:</label>
         <select name="month" id="month" class="form-select">
             <option value="">Все</option>
-            <option value="1">Январь</option>
-            <option value="2">Февраль</option>
-            <option value="3">Март</option>
-            <option value="4">Апрель</option>
-            <option value="5">Май</option>
-            <option value="6">Июнь</option>
-            <option value="7">Июль</option>
-            <option value="8">Август</option>
-            <option value="9">Сентябрь</option>
-            <option value="10">Октябрь</option>
-            <option value="11">Ноябрь</option>
-            <option value="12">Декабрь</option>
+            {% for value, name in months %}
+                <option value="{{ value }}" {% if month|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>
+                    {{ name }}
+                </option>
+            {% endfor %}
         </select>
-    </div>
-
-    <div class="col-md-2">
-        <button type="submit" class="btn btn-primary w-100">Показать</button>
     </div>
 
     <div class="col-md-2">
         <button type="submit" name="export" value="1" class="btn btn-success w-100">Выгрузить в Excel</button>
     </div>
 </form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const monthSelect = document.getElementById('month');
+        const yearInput = document.getElementById('year');
+        const form = document.getElementById('filterForm');
+
+        // Когда пользователь меняет месяц — форма автоматически отправляется
+        monthSelect.addEventListener('change', function() {
+            form.submit();
+        });
+
+        // Когда пользователь меняет год — форма также отправляется
+        yearInput.addEventListener('change', function() {
+            form.submit();
+        });
+    });
+</script>
 
 {% if maintenance_data %}
     {% if month %}
@@ -63,6 +70,37 @@
         {% endwith %}
     {% endif %}
 
+    <form id="filterForm" class="row g-3 align-items-end mb-3">
+        <div class="col-md-3">
+            <label for="search" class="form-label">Поиск:</label>
+            <input type="text" id="search" name="search" class="form-control" placeholder="Введите название или инв. номер...">
+        </div>
+
+        <div class="col-md-3">
+            <label for="department" class="form-label">Подразделение:</label>
+            <select id="department" name="department" class="form-select">
+                <option value="">Все</option>
+                {% for dep in departments %}
+                    <option value="{{ dep.id }}">{{ dep.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label for="responsible" class="form-label">Ответственный:</label>
+            <select id="responsible" name="responsible" class="form-select">
+                <option value="">Все</option>
+                {% for person in responsibles %}
+                    <option value="{{ person.id }}">{{ person.get_full_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <button type="button" id="resetFilters" class="btn btn-outline-secondary w-100">Сбросить</button>
+        </div>
+    </form>
+
 
     <h4 class="mt-4">📅 Календарь ТО на {{ year }} год</h4>
     <div class="row">
@@ -78,18 +116,32 @@
                         {% if entries %}
                             <ul class="list-group list-group-flush">
                                 {% for entry in entries %}
-                                    <li class="list-group-item">
+                                    <li class="list-group-item"
+                                        data-department="{{ entry.asset.department.id }}"
+                                        data-responsible="{{ entry.asset.responsible_user.id }}">
                                         <strong>{{ entry.asset.name }}</strong><br>
                                         Инв. №: {{ entry.asset.inventory_number }}<br>
+                                        Подразделение: {{ entry.asset.department.name|default:"—" }}<br>
+                                        Ответственный:
+                                        {% if entry.asset.responsible_user %}
+                                            {{ entry.asset.responsible_user.get_full_name|default:entry.asset.responsible_user.username }}
+                                        {% else %}
+                                            —
+                                        {% endif %}<br>
                                         <small>Дата ТО: {{ entry.maintenance_date|date:"d.m.Y" }}</small><br>
                                         <button
-                                          class="btn btn-outline-primary btn-sm"
+                                          class="btn btn-outline-primary btn-sm mt-2"
                                           data-bs-toggle="modal"
                                           data-bs-target="#assetDetailModal"
-                                          data-asset-id="{{ entry.asset.id }}">
+                                          data-asset-name="{{ entry.asset.name }}"
+                                          data-inventory-number="{{ entry.asset.inventory_number }}"
+                                          data-department="{{ entry.asset.department.name|default:'—' }}"
+                                          data-responsible="{{ entry.asset.responsible_user.get_full_name|default:entry.asset.responsible_user.username|default:'—' }}"
+                                          data-date-acquired="{{ entry.asset.date_received|date:'d.m.Y'|default:'—' }}"
+                                          data-maintenance-date="{{ entry.maintenance_date|date:'d.m.Y'|default:'—' }}"
+                                          data-asset-warranty="{{ entry.asset.warranty_expiration|date:'d.m.Y' }}">
                                           Подробнее
                                         </button>
-
                                     </li>
                                 {% endfor %}
                             </ul>
@@ -105,6 +157,7 @@
 {% else %}
     <p>Нет данных для выбранного периода.</p>
 {% endif %}
+
 
 {% if has_maintenance_this_month %}
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
@@ -127,41 +180,48 @@
 {% endif %}
 
 
-<!-- Модальное окно для информации о ТО -->
-<div class="modal fade" id="assetDetailModal" tabindex="-1" aria-labelledby="assetDetailLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+<!-- Модальное окно с информацией о ценности -->
+<div class="modal fade" id="assetDetailModal" tabindex="-1" aria-labelledby="assetDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="assetDetailLabel">Информация о материальной ценности</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        <h5 class="modal-title" id="assetDetailModalLabel">Информация о материальной ценности</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div id="assetDetailContent">
-          <div class="text-center text-muted">Загрузка...</div>
-        </div>
+        <p><strong>Инвентарный №:</strong> <span id="modalInventoryNumber"></span></p>
+        <p><strong>Подразделение:</strong> <span id="modalDepartment"></span></p>
+        <p><strong>Ответственный:</strong> <span id="modalResponsible"></span></p>
+        <p><strong>Дата поступления:</strong> <span id="modalDateAcquired"></span></p>
+        <p><strong>Дата ТО:</strong> <span id="modalMaintenanceDate"></span></p>
+        <p><strong>Срок гарантии:</strong> <span id="modalWarranty"></span></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const modal = document.getElementById('assetDetailModal');
-      modal.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        const assetId = button.getAttribute('data-asset-id');
-        const content = modal.querySelector('#assetDetailContent');
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('assetDetailModal');
+  modal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const data = button.dataset;
 
-        // Показываем "Загрузка..."
-        content.innerHTML = '<div class="text-center text-muted">Загрузка данных...</div>';
-
-        fetch(`/assets/${assetId}/details/`)
-          .then(response => response.text())
-          .then(data => content.innerHTML = data)
-          .catch(() => content.innerHTML = '<div class="text-danger text-center">Ошибка загрузки данных.</div>');
-      });
-    });
+    modal.querySelector('.modal-title').textContent = data.assetName;
+    modal.querySelector('#modalInventoryNumber').textContent = data.inventoryNumber || '—';
+    modal.querySelector('#modalDepartment').textContent = data.department || '—';
+    modal.querySelector('#modalResponsible').textContent = data.responsible || '—';
+    modal.querySelector('#modalDateAcquired').textContent = data.dateAcquired || '—';
+    modal.querySelector('#modalMaintenanceDate').textContent = data.maintenanceDate || '—';
+    document.getElementById('modalWarranty').textContent = button.getAttribute('data-asset-warranty') || '—';
+  });
+});
 </script>
+
+
 
 <!-- Инициализация toast -->
 <script>
@@ -173,4 +233,48 @@
         }
     });
 </script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('search');
+        const departmentSelect = document.getElementById('department');
+        const responsibleSelect = document.getElementById('responsible');
+        const resetButton = document.getElementById('resetFilters');
+        const cards = document.querySelectorAll('.list-group-item');
+
+        function filterCards() {
+            const searchValue = searchInput.value.toLowerCase();
+            const departmentValue = departmentSelect.value;
+            const responsibleValue = responsibleSelect.value;
+
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                const dep = card.getAttribute('data-department');
+                const resp = card.getAttribute('data-responsible');
+
+                const matchesSearch = text.includes(searchValue);
+                const matchesDep = !departmentValue || dep === departmentValue;
+                const matchesResp = !responsibleValue || resp === responsibleValue;
+
+                if (matchesSearch && matchesDep && matchesResp) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        searchInput.addEventListener('input', filterCards);
+        departmentSelect.addEventListener('change', filterCards);
+        responsibleSelect.addEventListener('change', filterCards);
+
+        resetButton.addEventListener('click', () => {
+            searchInput.value = '';
+            departmentSelect.value = '';
+            responsibleSelect.value = '';
+            filterCards();
+        });
+    });
+</script>
+
 {% endblock %}

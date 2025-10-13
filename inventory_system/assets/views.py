@@ -357,7 +357,8 @@ class MaintenancePlanView(View):
                     if not month or int(month) == current_date.month:
                         maintenance_data.append({
                             'asset': asset,
-                            'maintenance_date': current_date
+                            'maintenance_date': current_date,
+                            'warranty': asset.warranty_expiration
                         })
                 if current_date.year > year:
                     break
@@ -382,7 +383,16 @@ class MaintenancePlanView(View):
             ("12", "Декабрь"),
         ]
 
-        # Формируем календарь ТО на весь год
+        # Проверяем, есть ли ТО в текущем месяце
+        current_month = date.today().month
+        current_year = date.today().year
+        has_maintenance_this_month = any(
+            entry['maintenance_date'].month == current_month and
+            entry['maintenance_date'].year == current_year
+            for entry in maintenance_data
+        )
+
+        # Формируем календарь
         calendar_data = {m: [] for m in range(1, 13)}
         for entry in maintenance_data:
             m = entry['maintenance_date'].month
@@ -394,28 +404,10 @@ class MaintenancePlanView(View):
             'months': months,
             'maintenance_data': sorted(maintenance_data, key=lambda x: x['maintenance_date']),
             'calendar_data': calendar_data,
-        }
-
-        # Проверяем, есть ли ТО в текущем месяце
-        current_month = date.today().month
-        current_year = date.today().year
-        has_maintenance_this_month = any(
-            entry['maintenance_date'].month == current_month and
-            entry['maintenance_date'].year == current_year
-            for entry in maintenance_data
-        )
-
-        context = {
-            'year': year,
-            'month': month,
-            'maintenance_data': sorted(maintenance_data, key=lambda x: x['maintenance_date']),
-            'calendar_data': {m: [] for m in range(1, 13)},
             'has_maintenance_this_month': has_maintenance_this_month,
+            'departments': Department.objects.all(),
+            'responsibles': CustomUser.objects.all(),
         }
-
-        for entry in maintenance_data:
-            m = entry['maintenance_date'].month
-            context['calendar_data'][m].append(entry)
 
         return render(request, self.template_name, context)
 
