@@ -22,7 +22,7 @@ from datetime import date
 import datetime
 from dateutil.relativedelta import relativedelta
 from openpyxl import Workbook
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 
 
 class AssetCreateView(CreateView):
@@ -396,6 +396,27 @@ class MaintenancePlanView(View):
             'calendar_data': calendar_data,
         }
 
+        # Проверяем, есть ли ТО в текущем месяце
+        current_month = date.today().month
+        current_year = date.today().year
+        has_maintenance_this_month = any(
+            entry['maintenance_date'].month == current_month and
+            entry['maintenance_date'].year == current_year
+            for entry in maintenance_data
+        )
+
+        context = {
+            'year': year,
+            'month': month,
+            'maintenance_data': sorted(maintenance_data, key=lambda x: x['maintenance_date']),
+            'calendar_data': {m: [] for m in range(1, 13)},
+            'has_maintenance_this_month': has_maintenance_this_month,
+        }
+
+        for entry in maintenance_data:
+            m = entry['maintenance_date'].month
+            context['calendar_data'][m].append(entry)
+
         return render(request, self.template_name, context)
 
     def export_to_excel(self, maintenance_data, year, month):
@@ -568,3 +589,7 @@ def export_maintenance_to_excel(request):
     response['Content-Disposition'] = 'attachment; filename="Журнал_ТО.xlsx"'
     wb.save(response)
     return response
+
+def asset_detail_partial(request, pk):
+    asset = get_object_or_404(Asset, pk=pk)
+    return render(request, 'partials/asset_detail.html', {'asset': asset})

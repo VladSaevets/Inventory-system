@@ -17,4 +17,6 @@ urlpatterns = [
     path('maintenance-plan/', MaintenancePlanView.as_view(), name='maintenance_plan'),
     path('maintenance-plan/export/', MaintenancePlanView.export_to_excel, name='export_maintenance_plan_excel'),
     path('maintenance-journal/', views.MaintenanceJournalView.as_view(), name='maintenance_journal'),
-    path('maintenance-journal/export/', views.export_maintenance_to_excel, name='export_maintenance_excel'),]
+    path('maintenance-journal/export/', views.export_maintenance_to_excel, name='export_maintenance_excel'),
+    path('assets/<int:pk>/details/', views.asset_detail_partial, name='asset_detail_partial'),
+]

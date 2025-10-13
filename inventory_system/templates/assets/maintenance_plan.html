@@ -15,9 +15,18 @@
         <label for="month" class="form-label">Месяц:</label>
         <select name="month" id="month" class="form-select">
             <option value="">Все</option>
-            {% for value, name in months %}
-                <option value="{{ value }}" {% if month|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ name }}</option>
-            {% endfor %}
+            <option value="1">Январь</option>
+            <option value="2">Февраль</option>
+            <option value="3">Март</option>
+            <option value="4">Апрель</option>
+            <option value="5">Май</option>
+            <option value="6">Июнь</option>
+            <option value="7">Июль</option>
+            <option value="8">Август</option>
+            <option value="9">Сентябрь</option>
+            <option value="10">Октябрь</option>
+            <option value="11">Ноябрь</option>
+            <option value="12">Декабрь</option>
         </select>
     </div>
 
@@ -73,9 +82,14 @@
                                         <strong>{{ entry.asset.name }}</strong><br>
                                         Инв. №: {{ entry.asset.inventory_number }}<br>
                                         <small>Дата ТО: {{ entry.maintenance_date|date:"d.m.Y" }}</small><br>
-                                        <a href="{% url 'assets:asset_detail' pk=entry.asset.pk %}" class="btn btn-sm btn-outline-primary mt-2">
-                                            Подробнее
-                                        </a>
+                                        <button
+                                          class="btn btn-outline-primary btn-sm"
+                                          data-bs-toggle="modal"
+                                          data-bs-target="#assetDetailModal"
+                                          data-asset-id="{{ entry.asset.id }}">
+                                          Подробнее
+                                        </button>
+
                                     </li>
                                 {% endfor %}
                             </ul>
@@ -91,6 +105,63 @@
 {% else %}
     <p>Нет данных для выбранного периода.</p>
 {% endif %}
+
+{% if has_maintenance_this_month %}
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        <div id="maintenanceToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    🔧 В этом месяце запланировано техническое обслуживание!
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var toastEl = document.getElementById("maintenanceToast");
+            var toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        });
+    </script>
+{% endif %}
+
+
+<!-- Модальное окно для информации о ТО -->
+<div class="modal fade" id="assetDetailModal" tabindex="-1" aria-labelledby="assetDetailLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="assetDetailLabel">Информация о материальной ценности</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body">
+        <div id="assetDetailContent">
+          <div class="text-center text-muted">Загрузка...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const modal = document.getElementById('assetDetailModal');
+      modal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const assetId = button.getAttribute('data-asset-id');
+        const content = modal.querySelector('#assetDetailContent');
+
+        // Показываем "Загрузка..."
+        content.innerHTML = '<div class="text-center text-muted">Загрузка данных...</div>';
+
+        fetch(`/assets/${assetId}/details/`)
+          .then(response => response.text())
+          .then(data => content.innerHTML = data)
+          .catch(() => content.innerHTML = '<div class="text-danger text-center">Ошибка загрузки данных.</div>');
+      });
+    });
+</script>
 
 <!-- Инициализация toast -->
 <script>

@@ -1,0 +1,12 @@
+<div class="container-fluid">
+  <h5>{{ asset.name }}</h5>
+  <p><strong>Инвентарный №:</strong> {{ asset.inventory_number }}</p>
+  <p><strong>Подразделение:</strong> {{ asset.department }}</p>
+  <p><strong>Ответственный:</strong> {{ asset.responsible }}</p>
+  <p><strong>Дата поступления:</strong> {{ asset.received_date|date:"d.m.Y" }}</p>
+  <p><strong>Дата ТО:</strong> {{ asset.maintenance_date|date:"d.m.Y" }}</p>
+  <p><strong>Срок гарантии:</strong> {{ asset.warranty_date|date:"d.m.Y" }}</p>
+  {% if asset.notes %}
+    <p><strong>Примечание:</strong> {{ asset.notes }}</p>
+  {% endif %}
+</div>
